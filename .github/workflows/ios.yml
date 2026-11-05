@@ -1,0 +1,48 @@
+name: iOS prints
+on: [workflow_dispatch, push]
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Simuladores disponíveis
+        run: xcrun simctl list devices available | grep -i iphone
+      - name: Escolher iPhone (16 Pro Max ou o mais novo)
+        id: dev
+        run: |
+          NAME=$(xcrun simctl list devices available | grep -E "iPhone 1[6-9] Pro Max" | tail -1 | sed -E 's/^ *([^()]*[^ ]) *\(.*/\1/')
+          [ -z "$NAME" ] && NAME=$(xcrun simctl list devices available | grep -E "iPhone" | tail -1 | sed -E 's/^ *([^()]*[^ ]) *\(.*/\1/')
+          UDID=$(xcrun simctl list devices available | grep "$NAME (" | tail -1 | grep -oE '[0-9A-F-]{36}')
+          echo "name=$NAME" >> $GITHUB_OUTPUT; echo "udid=$UDID" >> $GITHUB_OUTPUT
+          echo "Usando $NAME $UDID"
+      - name: Configurar pt-BR e barra de status
+        run: |
+          U=${{ steps.dev.outputs.udid }}
+          xcrun simctl boot $U || true
+          xcrun simctl bootstatus $U -b
+          xcrun simctl spawn $U defaults write "Apple Global Domain" AppleLanguages -array pt-BR
+          xcrun simctl spawn $U defaults write "Apple Global Domain" AppleLocale -string pt_BR
+          xcrun simctl shutdown $U; xcrun simctl boot $U; xcrun simctl bootstatus $U -b
+          xcrun simctl status_bar $U override --time "9:41" --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
+      - name: Gerar projeto
+        run: brew install xcodegen && cd ios && xcodegen
+      - name: Rodar roteiro no Safari
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/shots
+          cd ios
+          SHOT_DIR=$GITHUB_WORKSPACE/shots xcodebuild test -project AfimPrints.xcodeproj -scheme UITests \
+            -destination "id=${{ steps.dev.outputs.udid }}" -resultBundlePath $GITHUB_WORKSPACE/result.xcresult \
+            CODE_SIGNING_ALLOWED=NO TEST_RUNNER_SHOT_DIR=$GITHUB_WORKSPACE/shots || true
+      - name: Exportar anexos
+        if: always()
+        run: |
+          mkdir -p shots/attachments
+          xcrun xcresulttool export attachments --path result.xcresult --output-path shots/attachments || true
+          xcrun simctl io ${{ steps.dev.outputs.udid }} screenshot shots/final_host.png || true
+          ls -R shots
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-prints
+          path: shots

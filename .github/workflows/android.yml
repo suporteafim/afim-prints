@@ -1,0 +1,34 @@
+name: Android prints
+on: [workflow_dispatch, push]
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Habilitar KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: Baixar APK
+        run: curl -L -o afim.apk "https://huggingface.co/afimguairasp/afim/resolve/main/AfimGuairaSP.apk?download=true" && ls -la afim.apk
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          disable-animations: true
+          script: |
+            mkdir -p shots
+            adb shell settings put system system_locales pt-BR || true
+            adb shell am start -a android.intent.action.VIEW -d "https://afimguairasp-baixar.static.hf.space/" ; sleep 15 ; adb exec-out screencap -p > shots/a1_pagina_baixar.png
+            adb install -r afim.apk ; sleep 3
+            PKG=$(adb shell pm list packages -3 | tr -d '\r' | sed 's/package://' | grep -iv -E "google|android" | head -1) ; echo "pacote $PKG"
+            adb shell monkey -p $PKG -c android.intent.category.LAUNCHER 1 ; sleep 15 ; adb exec-out screencap -p > shots/a2_app_abertura.png
+            sleep 8 ; adb exec-out screencap -p > shots/a3_app_tela.png
+            adb shell input keyevent KEYCODE_HOME ; sleep 3 ; adb exec-out screencap -p > shots/a4_icone_tela_inicio.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-prints
+          path: shots
