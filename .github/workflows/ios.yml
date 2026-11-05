@@ -1,5 +1,8 @@
 name: iOS prints
-on: [workflow_dispatch, push]
+on:
+  workflow_dispatch:
+  push:
+    paths-ignore: ["state.txt"]
 jobs:
   ios:
     runs-on: macos-15

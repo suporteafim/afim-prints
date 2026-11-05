@@ -1,5 +1,8 @@
 name: Android prints
-on: [workflow_dispatch, push]
+on:
+  workflow_dispatch:
+  push:
+    paths-ignore: ["state.txt"]
 jobs:
   android:
     runs-on: ubuntu-latest
@@ -26,7 +29,12 @@ jobs:
             PKG=$(adb shell pm list packages -3 | tr -d '\r' | sed 's/package://' | grep -iv -E "google|android" | head -1) ; echo "pacote $PKG"
             adb shell monkey -p $PKG -c android.intent.category.LAUNCHER 1 ; sleep 15 ; adb exec-out screencap -p > shots/a2_app_abertura.png
             sleep 8 ; adb exec-out screencap -p > shots/a3_app_tela.png
-            adb shell input keyevent KEYCODE_HOME ; sleep 3 ; adb exec-out screencap -p > shots/a4_icone_tela_inicio.png
+            adb shell input tap 540 1800 ; sleep 5 ; adb exec-out screencap -p > shots/a4_toque_1.png
+            adb shell input swipe 540 1800 540 600 ; sleep 3 ; adb exec-out screencap -p > shots/a5_rolagem.png
+            adb shell input keyevent KEYCODE_BACK ; sleep 3 ; adb exec-out screencap -p > shots/a6_voltar.png
+            adb shell input keyevent KEYCODE_HOME ; sleep 3 ; adb exec-out screencap -p > shots/a7_icone_tela_inicio.png
+            adb logcat -d > shots/logcat.txt
+            if grep -q "FATAL EXCEPTION" shots/logcat.txt; then echo "RESULTADO: app FECHOU (crash)" | tee shots/resultado.txt; else echo "RESULTADO: abriu e navegou sem crash" | tee shots/resultado.txt; fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
