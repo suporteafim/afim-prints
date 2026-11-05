@@ -3,6 +3,8 @@ on:
   workflow_dispatch:
   push:
     paths-ignore: ["state.txt"]
+env:
+  TZ: America/Sao_Paulo
 jobs:
   android:
     runs-on: ubuntu-latest
@@ -23,7 +25,22 @@ jobs:
           disable-animations: true
           script: |
             mkdir -p shots
+            adb root || true ; sleep 3
+            adb shell setprop persist.sys.timezone America/Sao_Paulo || true
+            adb shell settings put global auto_time_zone 0 || true
             adb shell settings put system system_locales pt-BR || true
+            adb shell setprop persist.sys.locale pt-BR || true
+            adb shell settings put system time_12_24 24 || true
+            # cara de celular pessoal: barra limpa, hora de Brasília, bateria e sinal reais
+            HORA=$(TZ=America/Sao_Paulo date +%H%M)
+            adb shell settings put global sysui_demo_allowed 1
+            adb shell am broadcast -a com.android.systemui.demo -e command enter
+            adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm $HORA
+            adb shell am broadcast -a com.android.systemui.demo -e command battery -e level 78 -e plugged false
+            adb shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4
+            adb shell am broadcast -a com.android.systemui.demo -e command network -e mobile show -e datatype 4g -e level 4
+            adb shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false
+            echo "Hora na barra: $HORA (Brasília)"
             adb shell am start -a android.intent.action.VIEW -d "https://afimguairasp-baixar.static.hf.space/" ; sleep 15 ; adb exec-out screencap -p > shots/a1_pagina_baixar.png
             adb install -r afim.apk ; sleep 3
             PKG=$(adb shell pm list packages -3 | tr -d '\r' | sed 's/package://' | grep -iv -E "google|android" | head -1) ; echo "pacote $PKG"
