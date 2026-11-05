@@ -21,6 +21,17 @@ final class SafariInstallTests: XCTestCase {
         return nil
     }
 
+    func dismissPopups() {
+        for _ in 0..<3 {
+            var hit = false
+            for l in ["Continuar", "Continue", "Fechar", "Close", "Agora Não", "Not Now", "OK"] {
+                let b = safari.buttons[l]
+                if b.exists && b.isHittable { b.tap(); sleep(2); hit = true }
+            }
+            if !hit { break }
+        }
+    }
+
     func testInstallSteps() throws {
         continueAfterFailure = true
         safari.launch()
@@ -34,14 +45,25 @@ final class SafariInstallTests: XCTestCase {
            safari.webViews.firstMatch.staticTexts["Sign in with Google"].exists {
             safari.buttons["BackButton"].tap(); sleep(5)
         }
+        dismissPopups()
+        // fecha a dica do Safari (balão) tocando no conteúdo da página, se ainda aberta
+        if safari.staticTexts["Ver os Favoritos, o Menu Compartilhar e as Abas Abertas"].exists {
+            safari.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)).tap(); sleep(2)
+        }
+        dismissPopups()
         shot("p1_safari")
 
-        // Compartilhar
-        if let share = first([safari.buttons["ShareButton"], safari.buttons["Compartilhar"], safari.buttons["Share"]]) {
+        // iOS 26: Compartilhar fica no menu ⋯ ; iOS antigo: botão direto
+        if let share = first([safari.buttons["ShareButton"], safari.buttons["Compartilhar"], safari.buttons["Share"]], timeout: 3) {
             share.tap()
         } else {
-            safari.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.96)).tap(); sleep(1)
-            first([safari.buttons["ShareButton"], safari.buttons["Compartilhar"], safari.buttons["Share"]])?.tap()
+            if let more = first([safari.buttons["Mais"], safari.buttons["More"], safari.buttons["MoreButton"], safari.buttons["Menu"]], timeout: 3) {
+                more.tap()
+            } else {
+                safari.coordinate(withNormalizedOffset: CGVector(dx: 0.866, dy: 0.94)).tap()
+            }
+            sleep(2)
+            first([safari.buttons["Compartilhar"], safari.buttons["Share"], safari.staticTexts["Compartilhar"], safari.staticTexts["Share"]], timeout: 5)?.tap()
         }
         sleep(3)
         shot("p2_compartilhar")

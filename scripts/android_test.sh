@@ -26,7 +26,19 @@ echo "Hora na barra: $HORA (Brasília)"
 # pular a tela de boas-vindas do Chrome
 adb shell 'echo "_ --disable-fre --no-default-browser-check --no-first-run" > /data/local/tmp/chrome-command-line'
 adb shell am set-debug-app --persistent com.android.chrome
-adb shell am start -a android.intent.action.VIEW -d "https://afimguairasp-baixar.static.hf.space/" ; sleep 15 ; adb exec-out screencap -p > shots/a1_pagina_baixar.png
+adb shell am start -a android.intent.action.VIEW -d "https://afimguairasp-baixar.static.hf.space/" ; sleep 15
+# fecha o aviso de notificações do Chrome, se aparecer
+adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1 ; adb pull /sdcard/ui.xml /tmp/ui.xml >/dev/null 2>&1
+B=$(python3 -c "
+import re,sys
+x=open('/tmp/ui.xml',encoding='utf-8').read() if __import__('os').path.exists('/tmp/ui.xml') else ''
+for t in ['Não','No thanks','Não, obrigado']:
+  m=re.search(r'text=\"'+t+r'\"[^>]*bounds=\"\[(\d+),(\d+)\]\[(\d+),(\d+)\]',x)
+  if m:
+    a,b,c,d=map(int,m.groups()); print((a+c)//2,(b+d)//2); break
+")
+[ -n "$B" ] && adb shell input tap $B && sleep 3
+adb exec-out screencap -p > shots/a1_pagina_baixar.png
 adb install -r afim.apk ; sleep 3
 PKG=$(adb shell pm list packages -3 | tr -d '\r' | sed 's/package://' | grep -iv -E "google|android" | head -1) ; echo "pacote $PKG"
 adb shell am force-stop com.android.chrome ; adb shell monkey -p $PKG -c android.intent.category.LAUNCHER 1 ; sleep 15 ; adb exec-out screencap -p > shots/a2_app_abertura.png
