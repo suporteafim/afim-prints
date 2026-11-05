@@ -17,14 +17,19 @@ adb shell am broadcast -a com.android.systemui.demo -e command network -e wifi s
 adb shell am broadcast -a com.android.systemui.demo -e command network -e mobile show -e datatype 4g -e level 4
 adb shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false
 echo "Hora na barra: $HORA (Brasília)"
+# pular a tela de boas-vindas do Chrome
+adb shell 'echo "_ --disable-fre --no-default-browser-check --no-first-run" > /data/local/tmp/chrome-command-line'
+adb shell am set-debug-app --persistent com.android.chrome
 adb shell am start -a android.intent.action.VIEW -d "https://afimguairasp-baixar.static.hf.space/" ; sleep 15 ; adb exec-out screencap -p > shots/a1_pagina_baixar.png
 adb install -r afim.apk ; sleep 3
 PKG=$(adb shell pm list packages -3 | tr -d '\r' | sed 's/package://' | grep -iv -E "google|android" | head -1) ; echo "pacote $PKG"
-adb shell monkey -p $PKG -c android.intent.category.LAUNCHER 1 ; sleep 15 ; adb exec-out screencap -p > shots/a2_app_abertura.png
+adb shell am force-stop com.android.chrome ; adb shell monkey -p $PKG -c android.intent.category.LAUNCHER 1 ; sleep 15 ; adb exec-out screencap -p > shots/a2_app_abertura.png
 sleep 8 ; adb exec-out screencap -p > shots/a3_app_tela.png
 adb shell input tap 540 1800 ; sleep 5 ; adb exec-out screencap -p > shots/a4_toque_1.png
 adb shell input swipe 540 1800 540 600 ; sleep 3 ; adb exec-out screencap -p > shots/a5_rolagem.png
 adb shell input keyevent KEYCODE_BACK ; sleep 3 ; adb exec-out screencap -p > shots/a6_voltar.png
 adb shell input keyevent KEYCODE_HOME ; sleep 3 ; adb exec-out screencap -p > shots/a7_icone_tela_inicio.png
+FOCO=$(adb shell dumpsys window | grep -m1 mCurrentFocus | tr -d '\r')
 adb logcat -d > shots/logcat.txt
 if grep -q "FATAL EXCEPTION" shots/logcat.txt; then echo "RESULTADO: app FECHOU (crash)" | tee shots/resultado.txt; else echo "RESULTADO: abriu e navegou sem crash" | tee shots/resultado.txt; fi
+echo "Pacote: $PKG | Tela em foco no fim: $FOCO" | tee -a shots/resultado.txt
