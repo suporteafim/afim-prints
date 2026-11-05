@@ -6,6 +6,12 @@ adb shell setprop persist.sys.timezone America/Sao_Paulo || true
 adb shell settings put global auto_time_zone 0 || true
 adb shell settings put system system_locales pt-BR || true
 adb shell setprop persist.sys.locale pt-BR || true
+adb shell settings put global hide_error_dialogs 1 || true
+# reinicia o framework para aplicar o idioma pt-BR
+adb shell stop || true ; sleep 3 ; adb shell start || true
+until [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ]; do sleep 3; done
+sleep 45  # deixa o launcher assentar (evita 'Pixel Launcher isn't responding')
+adb shell input keyevent KEYCODE_HOME ; sleep 5
 adb shell settings put system time_12_24 24 || true
 # cara de celular pessoal: barra limpa, hora de Brasília, bateria e sinal reais
 HORA=$(TZ=America/Sao_Paulo date +%H%M)

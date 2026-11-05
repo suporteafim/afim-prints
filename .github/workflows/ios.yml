@@ -34,7 +34,7 @@ jobs:
           xcrun simctl ui $U appearance light || true
           # cara de celular pessoal: hora de Brasília, operadora, bateria real
           HORA=$(TZ=America/Sao_Paulo date +%H:%M)
-          xcrun simctl status_bar $U override --time "$HORA" --operatorName "Vivo" --dataNetwork 5g --cellularMode active --cellularBars 4 --wifiMode active --wifiBars 3 --batteryState discharged --batteryLevel 78
+          xcrun simctl status_bar $U override --time "$HORA" --operatorName "Vivo" --dataNetwork 5g --cellularMode active --cellularBars 4 --wifiMode active --wifiBars 3 --batteryState discharging --batteryLevel 78
           echo "Hora na barra: $HORA (Brasília)"
       - name: Gerar projeto
         run: brew install xcodegen && cd ios && xcodegen
