@@ -87,7 +87,7 @@ final class SafariInstallTests: XCTestCase {
         }
         shot("p3_adicionar_visivel")
         addEl()?.tap()
-        sleep(3)
+        sleep(8)  // espera o ícone do site carregar na tela de confirmação
         shot("p4_confirmar")
 
         // Confirma "Adicionar"
@@ -95,13 +95,22 @@ final class SafariInstallTests: XCTestCase {
         sleep(4)
         XCUIDevice.shared.press(.home)
         sleep(3)
+        // o ícone novo costuma ir para a próxima página da tela de início
+        let icon = springboard.icons["Afim"]
+        var pages = 0
+        while !(icon.exists && icon.isHittable) && pages < 4 {
+            springboard.swipeLeft(); sleep(2); pages += 1
+        }
         shot("p5_tela_inicio")
 
         // Abre o app pelo ícone
-        let icon = springboard.icons["Afim"]
-        if icon.waitForExistence(timeout: 5) {
+        if icon.exists && icon.isHittable {
             icon.tap(); sleep(10)
             shot("p6_app_1")
+            sleep(5)
+            shot("p7_app_tela_cheia")
+        } else {
+            XCTFail("Ícone do Afim não encontrado na tela de início")
         }
     }
 }
